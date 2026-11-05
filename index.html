@@ -340,6 +340,7 @@
         }
         .tel-top-left { top: 20px; left: 20px; }
         .tel-bottom-right { bottom: 20px; right: 20px; text-align: right; }
+        .tel-bottom-left { bottom: 20px; left: 20px; text-align: left; color: var(--accent-blue); opacity: 0.7;}
 
         /* Navigation hints */
         .scroll-hint {
@@ -386,12 +387,19 @@
 </head>
 <body>
 
-    <!-- HUD Telemetry -->
+    <!-- HUD Telemetry Globals -->
     <div class="telemetry tel-top-left" style="position: fixed; z-index: 99;">
         SYS.BOOT.SEQ... OK<br>
         VULKAN.API... ONLINE<br>
         LLAMA.CPP... SYNCED
     </div>
+    
+    <div class="telemetry tel-bottom-left" style="position: fixed; z-index: 99;">
+        AUTH_USER: RICHARD MATTHEW<br>
+        ROLE: SOFTWARE ENGINEER & SYSTEMS INTEGRATOR<br>
+        ACCESS: GRANTED
+    </div>
+
     <div class="telemetry tel-bottom-right" style="position: fixed; z-index: 99;">
         LAT: 22.756° S, 43.460° W<br>
         MEM: ALLOCATED<br>
@@ -523,7 +531,7 @@
         </div>
     </section>
 
-    <!-- SLIDE 6: Evolution Grid -->
+    <!-- SLIDE 6: Evolution Grid & Signature -->
     <section class="slide">
         <div class="content-wrapper">
             <h2 class="reveal">PROTOCOLO DE EVOLUÇÃO</h2>
@@ -550,6 +558,14 @@
                     <p style="font-size: 0.95rem;">Suspensão total do renderizador React para liberar ciclos puros de CPU à inferência. Pronto para integração Edge.</p>
                 </div>
             </div>
+
+            <!-- Portfolio Signature -->
+            <div class="reveal" style="margin-top: 5rem; text-align: center; width: 100%; transition-delay: 0.4s; position: relative;">
+                <div style="position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 250px; height: 1px; background: linear-gradient(90deg, transparent, var(--accent-blue), transparent);"></div>
+                <p style="font-family: 'JetBrains Mono'; font-size: 0.8rem; color: var(--text-muted); margin-top: 2rem; margin-bottom: 0.5rem; letter-spacing: 2px;">END OF FILE // SYSTEM OVERSEER</p>
+                <h3 style="font-family: 'JetBrains Mono'; font-size: 2rem; color: var(--accent-blue); letter-spacing: 4px; font-weight: 300; text-shadow: 0 0 15px var(--glow-color);">BY RICHARD MATTHEW</h3>
+                <p style="font-family: 'JetBrains Mono'; font-size: 1rem; color: var(--accent); letter-spacing: 3px; margin-top: 0.5rem; opacity: 0.9;">SOFTWARE ENGINEER & SYSTEMS INTEGRATOR</p>
+            </div>
         </div>
     </section>
 
@@ -568,10 +584,7 @@
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
                         entry.target.classList.add('active');
-                        // Optional: Unobserve after animating once
-                        // observer.unobserve(entry.target);
                     } else {
-                        // Remove class when scrolling away to trigger animation again when scrolling back
                         entry.target.classList.remove('active');
                     }
                 });
@@ -598,7 +611,6 @@
             gradDark.addColorStop(0, 'rgba(100, 123, 153, 0.8)');
             gradDark.addColorStop(1, 'rgba(100, 123, 153, 0.1)');
 
-            // We define the chart variable so we can update it (e.g. animate on scroll)
             let benchChart = new Chart(ctxBench, {
                 type: 'bar',
                 data: {
