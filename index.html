@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jarvis Performance & Evolution - HUD Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@100;300;400&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #050914; /* Deep dark blue, almost black */
+            --text-main: #e0e8f5;
+            --text-muted: #647b99;
+            --accent: #ffffff;
+            --accent-blue: #66e0ff; /* Bright HUD blue */
+            --border-color: #1a2c4d;
+            --chart-bg: rgba(10, 20, 40, 0.6);
+            --glow-color: rgba(102, 224, 255, 0.5);
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body, html {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            height: 100%;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+            /* Grid background to look like a HUD interface */
+            background-image: 
+                linear-gradient(rgba(26, 44, 77, 0.3) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(26, 44, 77, 0.3) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+
+        /* Tech scanline overlay */
+        body::after {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+
+        .slide {
+            min-height: 100vh;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            scroll-snap-align: start;
+            padding: 4rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .content-wrapper {
+            max-width: 950px;
+            width: 100%;
+            position: relative;
+        }
+
+        /* Glitch effect on headers */
+        h1 {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 4rem;
+            font-weight: 300;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: var(--accent-blue);
+            text-shadow: 0 0 10px var(--glow-color);
+            text-transform: uppercase;
+        }
+
+        h2 {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.2rem;
+            font-weight: 300;
+            letter-spacing: 0.02em;
+            margin-bottom: 2rem;
+            color: var(--accent);
+            border-left: 4px solid var(--accent-blue);
+            padding-left: 1rem;
+        }
+
+        p {
+            font-size: 1.15rem;
+            line-height: 1.6;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+            font-weight: 300;
+        }
+
+        .highlight {
+            color: var(--accent-blue);
+            font-weight: 500;
+            text-shadow: 0 0 5px var(--glow-color);
+        }
+
+        /* ---------------------------------
+           Advanced HUD / Iron Man Styles
+           --------------------------------- */
+        
+        /* Slide 1: Main Arc Reactor / Target Reticle */
+        .hud-target {
+            width: 300px;
+            height: 300px;
+            margin: 0 auto 3rem auto;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Outer brackets (like Iron Man HUD) */
+        .hud-bracket {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 2px solid transparent;
+            border-radius: 50%;
+            animation: rotate-slow 20s linear infinite;
+        }
+        .hud-bracket::before, .hud-bracket::after {
+            content: '';
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--accent-blue);
+            box-shadow: 0 0 10px var(--glow-color);
+        }
+        .hud-bracket-1::before { top: 0; left: 0; border-right: none; border-bottom: none; border-top-left-radius: 20px; }
+        .hud-bracket-1::after { bottom: 0; right: 0; border-left: none; border-top: none; border-bottom-right-radius: 20px; }
+        
+        .hud-bracket-2 { animation: rotate-slow-reverse 15s linear infinite; }
+        .hud-bracket-2::before { top: 0; right: 0; border-left: none; border-bottom: none; border-top-right-radius: 20px; }
+        .hud-bracket-2::after { bottom: 0; left: 0; border-right: none; border-top: none; border-bottom-left-radius: 20px; }
+
+        /* Inner circles (data rings) */
+        .hud-ring-1 {
+            width: 200px; height: 200px;
+            border-radius: 50%;
+            border: 1px dashed rgba(102, 224, 255, 0.4);
+            position: absolute;
+            animation: spin 10s linear infinite;
+        }
+        .hud-ring-2 {
+            width: 170px; height: 170px;
+            border-radius: 50%;
+            border: 2px solid rgba(102, 224, 255, 0.1);
+            border-top: 2px solid var(--accent-blue);
+            border-bottom: 2px solid var(--accent-blue);
+            position: absolute;
+            animation: spin-reverse 8s linear infinite;
+        }
+        .hud-center {
+            width: 120px; height: 120px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(102,224,255,0.2) 0%, transparent 70%);
+            border: 1px solid rgba(102, 224, 255, 0.3);
+            position: absolute;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: pulse-glow 3s ease-in-out infinite;
+        }
+        .hud-center::after {
+            content: 'J.A.R.V.I.S';
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--accent-blue);
+            letter-spacing: 2px;
+        }
+        .hud-crosshair {
+            position: absolute;
+            width: 100%; height: 100%;
+        }
+        .hud-crosshair::before {
+            content: ''; position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background: rgba(102, 224, 255, 0.2);
+        }
+        .hud-crosshair::after {
+            content: ''; position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: rgba(102, 224, 255, 0.2);
+        }
+
+        /* Slide 2: Hardware Assembly Animation */
+        .hardware-assembly {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 300px;
+            height: 400px;
+            opacity: 0.8;
+        }
+        .hw-part {
+            position: absolute;
+            border: 1px solid var(--accent-blue);
+            background: rgba(10, 20, 40, 0.8);
+            box-shadow: inset 0 0 15px rgba(102, 224, 255, 0.2);
+            transition: all 1s ease-out;
+        }
+        /* Reveal animations triggered on scroll */
+        .slide:nth-child(2) .hw-cpu {
+            width: 150px; height: 150px; top: 100px; left: 75px;
+            animation: assemble-cpu 2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        .slide:nth-child(2) .hw-ram {
+            width: 20px; height: 120px; top: 115px;
+            animation: assemble-ram 2.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        .hw-ram-1 { left: 30px; }
+        .hw-ram-2 { left: 250px; }
+        
+        .hw-cpu::after {
+            content: 'RYZEN 5';
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-family: 'JetBrains Mono'; font-size: 0.9rem; color: var(--accent-blue);
+        }
+
+        /* UI Grid Lines for Specs */
+        .specs-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+            margin-top: 2rem;
+            width: 60%; /* Leave space for assembly art */
+        }
+        .spec-item {
+            border-left: 2px solid var(--accent-blue);
+            padding-left: 1.5rem;
+            position: relative;
+            background: linear-gradient(90deg, rgba(102, 224, 255, 0.05) 0%, transparent 100%);
+            padding: 1rem 1rem 1rem 1.5rem;
+        }
+        .spec-item::before {
+            content: ''; position: absolute; left: -5px; top: 0; width: 8px; height: 8px; background: var(--accent-blue);
+        }
+        .spec-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent-blue);
+            margin-bottom: 0.5rem;
+        }
+        .spec-value {
+            font-size: 1.4rem;
+            font-weight: 300;
+            color: var(--text-main);
+        }
+
+        /* Tables HUD Style */
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 8px;
+            margin-top: 2rem;
+            font-size: 1.1rem;
+        }
+        th, td {
+            text-align: left;
+            padding: 1.2rem 1.5rem;
+            background: rgba(10, 20, 40, 0.4);
+            border-top: 1px solid rgba(102, 224, 255, 0.1);
+            border-bottom: 1px solid rgba(102, 224, 255, 0.1);
+        }
+        th {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 400;
+            color: var(--accent-blue);
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.1em;
+            border: none;
+            background: transparent;
+        }
+        td:first-child { border-left: 2px solid var(--accent-blue); }
+        td:last-child { border-right: 1px solid rgba(102, 224, 255, 0.1); }
+        
+        tr:hover td {
+            background: rgba(102, 224, 255, 0.05);
+            transition: background 0.3s;
+        }
+
+        /* Charts Container */
+        .chart-container {
+            background: var(--chart-bg);
+            border: 1px solid rgba(102, 224, 255, 0.2);
+            border-radius: 4px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            position: relative;
+            height: 350px;
+            width: 100%;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        /* Tech corner brackets for charts */
+        .chart-container::before {
+            content: ''; position: absolute; top: -1px; left: -1px; width: 20px; height: 20px; border-top: 2px solid var(--accent-blue); border-left: 2px solid var(--accent-blue);
+        }
+        .chart-container::after {
+            content: ''; position: absolute; bottom: -1px; right: -1px; width: 20px; height: 20px; border-bottom: 2px solid var(--accent-blue); border-right: 2px solid var(--accent-blue);
+        }
+        
+        .chart-row {
+            display: flex;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        
+        .chart-half {
+            flex: 1;
+            background: var(--chart-bg);
+            border: 1px solid rgba(102, 224, 255, 0.2);
+            padding: 1.5rem;
+            height: 300px;
+            position: relative;
+        }
+
+        /* Telemetry overlay */
+        .telemetry {
+            position: absolute;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            color: rgba(102, 224, 255, 0.4);
+            pointer-events: none;
+        }
+        .tel-top-left { top: 20px; left: 20px; }
+        .tel-bottom-right { bottom: 20px; right: 20px; text-align: right; }
+
+        /* Navigation hints */
+        .scroll-hint {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--accent-blue);
+            animation: pulse-glow 2s infinite;
+            letter-spacing: 2px;
+        }
+
+        /* Animations */
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes spin-reverse { 100% { transform: rotate(-360deg); } }
+        @keyframes rotate-slow { 100% { transform: rotate(360deg); } }
+        @keyframes rotate-slow-reverse { 100% { transform: rotate(-360deg); } }
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.5; box-shadow: 0 0 10px rgba(102, 224, 255, 0.2); }
+            50% { opacity: 1; box-shadow: 0 0 20px rgba(102, 224, 255, 0.6); }
+        }
+        
+        /* Assembly Animations (Iron Man style building) */
+        @keyframes assemble-cpu {
+            0% { transform: translateZ(-500px) rotateX(90deg); opacity: 0; }
+            100% { transform: translateZ(0) rotateX(0deg); opacity: 1; }
+        }
+        @keyframes assemble-ram {
+            0% { transform: translateY(-200px); opacity: 0; }
+            50% { transform: translateY(-200px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+
+        /* Observer classes for scroll triggers */
+        .reveal { opacity: 0; transform: translateY(30px); transition: all 0.8s ease-out; }
+        .reveal.active { opacity: 1; transform: translateY(0); }
+        
+        .chart-reveal { opacity: 0; transform: scale(0.95); transition: all 1s ease-out; }
+        .chart-reveal.active { opacity: 1; transform: scale(1); }
+
+    </style>
+</head>
+<body>
+
+    <!-- HUD Telemetry -->
+    <div class="telemetry tel-top-left" style="position: fixed; z-index: 99;">
+        SYS.BOOT.SEQ... OK<br>
+        VULKAN.API... ONLINE<br>
+        LLAMA.CPP... SYNCED
+    </div>
+    <div class="telemetry tel-bottom-right" style="position: fixed; z-index: 99;">
+        LAT: 22.756° S, 43.460° W<br>
+        MEM: ALLOCATED<br>
+        STATUS: AWAITING INPUT
+    </div>
+
+    <!-- SLIDE 1: Title (HUD Target) -->
+    <section class="slide">
+        <div class="content-wrapper text-center" style="text-align: center;">
+            <div class="hud-target reveal">
+                <div class="hud-bracket hud-bracket-1"></div>
+                <div class="hud-bracket hud-bracket-2"></div>
+                <div class="hud-ring-1"></div>
+                <div class="hud-ring-2"></div>
+                <div class="hud-center"></div>
+                <div class="hud-crosshair"></div>
+            </div>
+            <h1 class="reveal" style="transition-delay: 0.2s;">J.A.R.V.I.S</h1>
+            <p class="reveal" style="font-family: 'JetBrains Mono'; font-size: 1.2rem; color: var(--accent-blue); letter-spacing: 2px; transition-delay: 0.4s;">DIAGNÓSTICO DE PERFORMANCE V3</p>
+        </div>
+        <div class="scroll-hint">INICIAR VARREDURA [↓]</div>
+    </section>
+
+    <!-- SLIDE 2: Hardware Assembly -->
+    <section class="slide">
+        <div class="content-wrapper">
+            <h2 class="reveal">DIAGNÓSTICO DE HARDWARE</h2>
+            <p class="reveal" style="width: 60%; transition-delay: 0.1s;">Leitura da infraestrutura de inferência local. Mapeamento de CPU e aceleração gráfica integrada.</p>
+            
+            <div class="specs-grid reveal" style="transition-delay: 0.2s;">
+                <div class="spec-item">
+                    <div class="spec-title">Unidade Lógica (CPU)</div>
+                    <div class="spec-value">Ryzen 5 4600G</div>
+                    <p style="font-family: 'JetBrains Mono'; font-size: 0.85rem; margin-top: 0.5rem; color: var(--text-muted);">[6 CORES / 12 THREADS]</p>
+                </div>
+                <div class="spec-item">
+                    <div class="spec-title">Aceleração (iGPU)</div>
+                    <div class="spec-value">Radeon Vega</div>
+                    <p style="font-family: 'JetBrains Mono'; font-size: 0.85rem; margin-top: 0.5rem; color: var(--text-muted);">[VULKAN/RADV ATIVO]</p>
+                </div>
+                <div class="spec-item">
+                    <div class="spec-title">Memória Base</div>
+                    <div class="spec-value">~29 GiB</div>
+                    <p style="font-family: 'JetBrains Mono'; font-size: 0.85rem; margin-top: 0.5rem; color: var(--text-muted);">[COMPARTILHADA]</p>
+                </div>
+                <div class="spec-item">
+                    <div class="spec-title">Kernel</div>
+                    <div class="spec-value">Debian 13</div>
+                    <p style="font-family: 'JetBrains Mono'; font-size: 0.85rem; margin-top: 0.5rem; color: var(--text-muted);">[LINUX 6.12.113]</p>
+                </div>
+            </div>
+
+            <!-- CSS Art: Assembling Hardware -->
+            <div class="hardware-assembly">
+                <div class="hw-part hw-cpu"></div>
+                <div class="hw-part hw-ram hw-ram-1"></div>
+                <div class="hw-part hw-ram hw-ram-2"></div>
+                <div class="telemetry" style="top: 80px; left: 70px;">ASSEMBLING...</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SLIDE 3: The Engine -->
+    <section class="slide">
+        <div class="content-wrapper">
+            <h2 class="reveal">PARÂMETROS DE INFERÊNCIA</h2>
+            <p class="reveal" style="transition-delay: 0.1s;">O núcleo lógico que processa a matemática tensorial fora do escopo da interface (UI).</p>
+            
+            <table class="reveal" style="transition-delay: 0.2s;">
+                <tr>
+                    <th>Componente</th>
+                    <th>Especificação</th>
+                    <th>Status</th>
+                </tr>
+                <tr>
+                    <td class="highlight">Modelo Neural</td>
+                    <td>Gemma 2 9B IT (Q4_K_M) — 5.4 GiB</td>
+                    <td style="color: #66ff66; font-family: 'JetBrains Mono';">LOADED</td>
+                </tr>
+                <tr>
+                    <td class="highlight">Motor Numérico</td>
+                    <td>llama.cpp / llama-server (Build 11712)</td>
+                    <td style="color: #66ff66; font-family: 'JetBrains Mono';">ONLINE</td>
+                </tr>
+                <tr>
+                    <td class="highlight">Config. de Matriz</td>
+                    <td>CTX: 4096 | BATCH: 512 | MMAP: ON</td>
+                    <td style="color: #66ff66; font-family: 'JetBrains Mono';">OPTIMIZED</td>
+                </tr>
+            </table>
+        </div>
+    </section>
+
+    <!-- SLIDE 4: Benchmarks with Dynamic Chart -->
+    <section class="slide">
+        <div class="content-wrapper">
+            <h2 class="reveal">TELEMETRIA: PROMPT VS GERAÇÃO</h2>
+            <p class="reveal" style="transition-delay: 0.1s;">Análise do impacto da iGPU. O offload parcial atinge um ponto ótimo de transferência de barramento.</p>
+            
+            <div class="chart-container chart-reveal" style="transition-delay: 0.3s;">
+                <canvas id="benchmarkChart"></canvas>
+            </div>
+            
+            <p class="reveal" style="font-family: 'JetBrains Mono'; font-size: 0.85rem; margin-top: 1.5rem; color: var(--accent-blue); transition-delay: 0.5s;">
+                > ANÁLISE_SISTEMA: Offload de 20 camadas maximizou T/s (51.53) no prompt. Equilíbrio perfeito entre CPU, GPU e banda.
+            </p>
+        </div>
+    </section>
+
+    <!-- SLIDE 5: Rust vs Python Impact -->
+    <section class="slide">
+        <div class="content-wrapper">
+            <h2 class="reveal">ANÁLISE DE LINGUAGEM LÓGICA</h2>
+            
+            <div class="chart-row">
+                <div class="chart-half chart-reveal" style="transition-delay: 0.2s;">
+                    <!-- Added an inner HUD ring behind the doughnut chart -->
+                    <div style="position: absolute; top:50%; left:50%; transform:translate(-50%, -50%); width: 180px; height: 180px; border: 1px dashed rgba(102, 224, 255, 0.2); border-radius: 50%; animation: spin 20s linear infinite; pointer-events: none;"></div>
+                    <canvas id="impactChart"></canvas>
+                </div>
+                <div class="chart-half reveal" style="background: transparent; border: none; padding: 0; display: flex; flex-direction: column; justify-content: center; transition-delay: 0.4s;">
+                    <h3 style="font-family: 'JetBrains Mono'; color: var(--accent-blue); font-size: 1.2rem; margin-bottom: 0.5rem;">> CÁLCULO BRUTO (C/C++)</h3>
+                    <p style="font-size: 1rem;">O llama-server consome 97% do esforço. Reescrever o orquestrador (Python -> Rust) altera a geração em apenas <strong class="highlight">0% a 3%</strong>.</p>
+                    
+                    <h3 style="font-family: 'JetBrains Mono'; color: var(--accent-blue); font-size: 1.2rem; margin-top: 1.5rem; margin-bottom: 0.5rem;">> VANTAGEM TÁTICA (RUST)</h3>
+                    <p style="font-size: 1rem;">O ganho do Tauri não é numérico, é estrutural: <strong style="color: var(--accent);">Previsibilidade térmica, isolamento de processos e UI imune a travamentos.</strong></p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SLIDE 6: Evolution Grid -->
+    <section class="slide">
+        <div class="content-wrapper">
+            <h2 class="reveal">PROTOCOLO DE EVOLUÇÃO</h2>
+            
+            <div class="specs-grid reveal" style="transition-delay: 0.2s; width: 100%;">
+                <div class="spec-item">
+                    <div class="spec-title">V3.0 FUNDAÇÃO</div>
+                    <p style="color: var(--accent); font-weight: 400; font-size: 1.1rem; margin-bottom: 0.5rem;">Arquitetura Modular</p>
+                    <p style="font-size: 0.95rem;">Tauri controlando HTTP/SSE de forma invisível. Compactação inteligente SQLite para retenção de memória de longo prazo.</p>
+                </div>
+                <div class="spec-item">
+                    <div class="spec-title">V3.1 CALIBRAÇÃO</div>
+                    <p style="color: var(--accent); font-weight: 400; font-size: 1.1rem; margin-bottom: 0.5rem;">Hardware Targeting</p>
+                    <p style="font-size: 0.95rem;">Alocação cirúrgica: 6 Threads CPU + Perfil Vulkan dinâmico (20 vs 43 camadas) adaptável à necessidade de prompt ou fluxo de geração.</p>
+                </div>
+                <div class="spec-item">
+                    <div class="spec-title">V3.5 LATÊNCIA</div>
+                    <p style="color: var(--accent); font-weight: 400; font-size: 1.1rem; margin-bottom: 0.5rem;">Otimização TTFT</p>
+                    <p style="font-size: 0.95rem;">Invalidação seletiva de cache de prompts. Aplicação de quantizações densas com Flash Attention para superar gargalos de barramento.</p>
+                </div>
+                <div class="spec-item">
+                    <div class="spec-title">V4.0 ESCALA</div>
+                    <p style="color: var(--accent); font-weight: 400; font-size: 1.1rem; margin-bottom: 0.5rem;">Modo Suspense</p>
+                    <p style="font-size: 0.95rem;">Suspensão total do renderizador React para liberar ciclos puros de CPU à inferência. Pronto para integração Edge.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Scripts for Scroll animations and Charts -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            // --- Intersection Observer for Scroll Animations ---
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.3
+            };
+
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('active');
+                        // Optional: Unobserve after animating once
+                        // observer.unobserve(entry.target);
+                    } else {
+                        // Remove class when scrolling away to trigger animation again when scrolling back
+                        entry.target.classList.remove('active');
+                    }
+                });
+            }, observerOptions);
+
+            document.querySelectorAll('.reveal, .chart-reveal, .hw-cpu, .hw-ram').forEach(el => {
+                observer.observe(el);
+            });
+
+            // --- Chart Defaults for HUD Style ---
+            Chart.defaults.color = '#647b99';
+            Chart.defaults.font.family = "'JetBrains Mono', monospace";
+            Chart.defaults.font.size = 11;
+
+            // --- Benchmark Chart (Slide 4) ---
+            const ctxBench = document.getElementById('benchmarkChart').getContext('2d');
+            
+            // Neon gradients
+            let gradBlue = ctxBench.createLinearGradient(0, 0, 0, 400);
+            gradBlue.addColorStop(0, 'rgba(102, 224, 255, 0.8)');
+            gradBlue.addColorStop(1, 'rgba(102, 224, 255, 0.1)');
+
+            let gradDark = ctxBench.createLinearGradient(0, 0, 0, 400);
+            gradDark.addColorStop(0, 'rgba(100, 123, 153, 0.8)');
+            gradDark.addColorStop(1, 'rgba(100, 123, 153, 0.1)');
+
+            // We define the chart variable so we can update it (e.g. animate on scroll)
+            let benchChart = new Chart(ctxBench, {
+                type: 'bar',
+                data: {
+                    labels: ['CPU (6 Thr)', 'Vulkan (20 L)', 'Vulkan (43 L)'],
+                    datasets: [
+                        {
+                            label: 'PROMPT (Tokens/s)',
+                            data: [19.30, 51.53, 41.13],
+                            backgroundColor: gradBlue,
+                            borderColor: '#66e0ff',
+                            borderWidth: 1,
+                            borderRadius: 2
+                        },
+                        {
+                            label: 'GERAÇÃO (Tokens/s)',
+                            data: [4.58, 6.49, 6.97],
+                            backgroundColor: gradDark,
+                            borderColor: '#647b99',
+                            borderWidth: 1,
+                            borderRadius: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 2000,
+                        easing: 'easeOutQuart'
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true, 
+                            grid: { color: 'rgba(102, 224, 255, 0.1)', tickColor: 'transparent' },
+                            border: { dash: [4, 4] }
+                        },
+                        x: { 
+                            grid: { display: false } 
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: { color: '#66e0ff', boxWidth: 12 },
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+
+            // --- Impact Chart (Slide 5) ---
+            const ctxImpact = document.getElementById('impactChart').getContext('2d');
+            new Chart(ctxImpact, {
+                type: 'doughnut',
+                data: {
+                    labels: ['MOTOR C/C++', 'UI ORQUESTRADOR'],
+                    datasets: [{
+                        data: [97, 3],
+                        backgroundColor: ['#1a2c4d', '#66e0ff'],
+                        borderColor: '#050914',
+                        borderWidth: 2,
+                        hoverOffset: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '80%',
+                    animation: {
+                        animateScale: true,
+                        animateRotate: true,
+                        duration: 2000
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#647b99', padding: 20 }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ' ' + context.label + ' [' + context.parsed + '%]';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
